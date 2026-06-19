@@ -1,7 +1,8 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import * as bcrypt from 'bcrypt';
 import { JwtService } from '@nestjs/jwt';
+import { UserResponse } from './interfaces/auth.interface';
 @Injectable()
 export class AuthService {
     constructor(private prisma: PrismaService, private jwtService: JwtService) {}
@@ -56,6 +57,24 @@ export class AuthService {
 
         return { access_token: token };
 
+    }
+
+
+    async me(id:number):Promise<UserResponse>{
+        const user =await this.prisma.user.findUnique({
+            where:{id:id},
+            select:{
+                id: true,
+                email: true,
+                username: true
+            }
+        })
+
+        if(!user){
+            throw new NotFoundException('존재하지 않는 유저입니다.')
+        }else{
+            return user
+        }
     }
 
 }
