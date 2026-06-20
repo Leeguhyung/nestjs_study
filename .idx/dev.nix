@@ -10,6 +10,7 @@
     # pkgs.python311Packages.pip
     # pkgs.nodejs_22
     # pkgs.nodePackages.nodemon
+    pkgs.postgresql
   ];
   # Sets environment variables in the workspace
   env = {};
