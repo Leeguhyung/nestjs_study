@@ -7,11 +7,14 @@ import { PrismaService } from '../prisma/prisma.service';
 import * as bcrypt from 'bcrypt';
 import { JwtService } from '@nestjs/jwt';
 import { UserResponse } from './interfaces/auth.interface';
+import { Redis } from 'ioredis';
+import { InjectRedis } from '@nestjs-modules/ioredis';
 @Injectable()
 export class AuthService {
     constructor(
         private prisma: PrismaService,
         private jwtService: JwtService,
+        @InjectRedis() private redis: Redis,
     ) {}
 
     async register(
@@ -59,13 +62,31 @@ export class AuthService {
             throw new UnauthorizedException('비밀번호가 일치하지 않습니다.');
         }
 
-        const token = this.jwtService.sign({
-            sub: user.id,
-            email: user.email,
-            username: user.username,
-        });
+        const token = this.jwtService.sign(
+            {
+                sub: user.id,
+                email: user.email,
+                username: user.username,
+            },
+            { expiresIn: '15m' },
+        );
 
-        return { access_token: token };
+        const refreshToken = this.jwtService.sign(
+            {
+                sub: user.id,
+                email: user.email,
+                username: user.username,
+            },
+            { expiresIn: '7d' },
+        );
+        await this.redis.set(
+            `refresh_token:${user.id}`,
+            refreshToken,
+            'EX',
+            60 * 60 * 24 * 7,
+        ); // 7일 동안 유효한 리프레시 토큰 저장
+
+        return { access_token: token, refresh_token: refreshToken };
     }
 
     async me(id: number): Promise<UserResponse> {
@@ -97,5 +118,35 @@ export class AuthService {
         });
 
         return updateUser;
+    }
+
+    async refresh(refreshToken: string): Promise<any> {
+        const payload = this.jwtService.verify(refreshToken);
+        const userId = payload.sub;
+
+        const storedRefreshToken = await this.redis.get(
+            `refresh_token:${userId}`,
+        );
+
+        if (!storedRefreshToken || storedRefreshToken !== refreshToken) {
+            throw new UnauthorizedException(
+                '리프레시 토큰이 유효하지 않습니다.',
+            );
+        }
+
+        const newAccessToken = this.jwtService.sign(
+            {
+                sub: payload.sub,
+                email: payload.email,
+                username: payload.username,
+            },
+            { expiresIn: '15m' },
+        );
+
+        return { access_token: newAccessToken };
+    }
+
+    logout(userId: number): Promise<any> {
+        return this.redis.del(`refresh_token:${userId}`);
     }
 }

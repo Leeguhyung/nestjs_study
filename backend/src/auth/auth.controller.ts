@@ -53,4 +53,17 @@ export class AuthController {
     ): Promise<any> {
         return this.authService.updateProfile(user, username);
     }
+
+    @Post('refresh')
+    refresh(
+        @Body() { refresh_token }: { refresh_token: string },
+    ): Promise<any> {
+        return this.authService.refresh(refresh_token);
+    }
+
+    @UseGuards(JwtAuthGuard)
+    @Post('logout')
+    logout(@Req() { user }: any): Promise<any> {
+        return this.authService.logout(user.id);
+    }
 }
