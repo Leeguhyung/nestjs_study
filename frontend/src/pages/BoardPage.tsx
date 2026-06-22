@@ -8,13 +8,19 @@ export default function BoardPage() {
   const [posts, setPosts] = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [keyword, setKeyword] = useState('');
   const { user } = useAuth();
 
-  useEffect(() => {
-    api.get('/posts')
+  const fetchPosts = (kw = '') => {
+    setLoading(true);
+    api.get('/posts', { params: kw ? { keyword: kw } : {} })
       .then((res) => setPosts(res.data))
       .catch(() => setError('게시글을 불러오지 못했습니다.'))
       .finally(() => setLoading(false));
+  };
+
+  useEffect(() => {
+    fetchPosts();
   }, []);
 
   if (loading) return <div className="loading">불러오는 중...</div>;
@@ -25,6 +31,19 @@ export default function BoardPage() {
         <h2>게시판</h2>
         {user && (
           <Link to="/board/create" className="btn btn-primary">글쓰기</Link>
+        )}
+      </div>
+      <div className="search-bar">
+        <input
+          type="text"
+          value={keyword}
+          onChange={(e) => setKeyword(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && fetchPosts(keyword)}
+          placeholder="제목 또는 내용 검색..."
+        />
+        <button className="btn btn-primary" onClick={() => fetchPosts(keyword)}>검색</button>
+        {keyword && (
+          <button className="btn btn-outline" onClick={() => { setKeyword(''); fetchPosts(); }}>초기화</button>
         )}
       </div>
 

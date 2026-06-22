@@ -1,14 +1,24 @@
-import { Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import {
+    Injectable,
+    NotFoundException,
+    UnauthorizedException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import * as bcrypt from 'bcrypt';
 import { JwtService } from '@nestjs/jwt';
 import { UserResponse } from './interfaces/auth.interface';
 @Injectable()
 export class AuthService {
-    constructor(private prisma: PrismaService, private jwtService: JwtService) {}
-    
-    async register(email: string, username: string, password: string): Promise<any> {
-        
+    constructor(
+        private prisma: PrismaService,
+        private jwtService: JwtService,
+    ) {}
+
+    async register(
+        email: string,
+        username: string,
+        password: string,
+    ): Promise<any> {
         const findUser = await this.prisma.user.findUnique({
             where: {
                 email: email,
@@ -29,14 +39,10 @@ export class AuthService {
             },
         });
 
-
         return { id: user.id, email: user.email, username: user.username };
     }
 
-
-
     async login(email: string, password: string): Promise<any> {
-
         const user = await this.prisma.user.findUnique({
             where: {
                 email: email,
@@ -47,37 +53,49 @@ export class AuthService {
             throw new UnauthorizedException('존재하지 않는 이메일입니다.');
         }
 
-        const passwordRehash = await bcrypt.compare(password, user.password)
+        const passwordRehash = await bcrypt.compare(password, user.password);
 
         if (!passwordRehash) {
             throw new UnauthorizedException('비밀번호가 일치하지 않습니다.');
         }
 
-        const token = this.jwtService.sign({ sub: user.id, email: user.email, username: user.username })
+        const token = this.jwtService.sign({
+            sub: user.id,
+            email: user.email,
+            username: user.username,
+        });
 
         return { access_token: token };
-
     }
 
-
-    async me(id:number):Promise<UserResponse>{
-        const user =await this.prisma.user.findUnique({
-            where:{id:id},
-            select:{
+    async me(id: number): Promise<UserResponse> {
+        const user = await this.prisma.user.findUnique({
+            where: { id: id },
+            select: {
                 id: true,
                 email: true,
-                username: true
-            }
-        })
+                username: true,
+            },
+        });
 
-        if(!user){
-            throw new NotFoundException('존재하지 않는 유저입니다.')
-        }else{
-            return user
+        if (!user) {
+            throw new NotFoundException('존재하지 않는 유저입니다.');
+        } else {
+            return user;
         }
     }
 
+    async updateProfile(user: any, username: string): Promise<any> {
+        const updateUser = await this.prisma.user.update({
+            where: { id: user.id },
+            data: { username: username },
+            select: {
+                id: true,
+                email: true,
+                username: true,
+            },
+        });
+
+        return updateUser;
+    }
 }
-   
-
-

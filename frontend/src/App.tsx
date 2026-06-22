@@ -10,6 +10,7 @@ import CreatePostPage from './pages/CreatePostPage';
 import EditPostPage from './pages/EditPostPage';
 import ChatPage from './pages/ChatPage';
 import QRPage from './pages/QRPage';
+import ProfilePage from './pages/ProfilePage';
 
 export default function App() {
   return (
@@ -36,6 +37,10 @@ export default function App() {
               element={<PrivateRoute><ChatPage /></PrivateRoute>}
             />
             <Route path="/qr" element={<QRPage />} />
+            <Route
+              path="/profile"
+              element={<PrivateRoute><ProfilePage /></PrivateRoute>}
+            />
           </Routes>
         </main>
       </BrowserRouter>
